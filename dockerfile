@@ -1,31 +1,31 @@
 FROM php:8.4-fpm
 
-# 1. Install system dependencies
+# 1. Installer systemavhengigheter
 RUN apt-get update && apt-get install -y \
     git unzip libpng-dev libjpeg-dev libfreetype6-dev libzip-dev \
     libicu-dev libxml2-dev libonig-dev libpq-dev libmagickwand-dev nginx \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Compile and enable PHP extensions (GD and Zip are forced here)
+# 2. Kompiler PHP-utvidelser
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install gd zip intl xml mbstring pdo pdo_mysql pdo_pgsql bcmath calendar \
     && pecl install imagick apcu \
     && docker-php-ext-enable imagick apcu
 
-# 3. Set environment variable to allow Composer to run cleanly as root
 ENV COMPOSER_ALLOW_SUPERUSER=1
-
-# 4. Install Composer
 COPY --from=composer:2.5 /usr/bin/composer /usr/bin/composer
 
-# 5. Copy project files and run Composer
 WORKDIR /app
 COPY . .
 
-# Run composer installation
+# 3. Installer avhengigheter
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# 6. Setup Nginx Configuration
+# 4. ENDRE EIER OG RETTIGHETER PÅ MAPPER (Dette fikser 500-feilen)
+RUN chown -R www-data:www-data /app \
+    && chmod -R 775 /app/storage /app/bootstrap/cache
+
+# 5. Setup Nginx
 RUN echo 'server { \
     listen 80; \
     root /app/public; \
